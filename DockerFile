@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.16.2-gpu
+FROM rayproject/ray-ml:2.10.0-gpu
 
 ENV PYTHONUNBUFFERED=TRUE \
     PYTHONDONTWRITEBYTECODE=TRUE \
@@ -8,16 +8,13 @@ ENV PYTHONUNBUFFERED=TRUE \
     DEBIAN_FRONTEND=noninteractive
 
 RUN pip install --upgrade pip
-RUN pip install ray["rllib"] \ 
-	tensorflow_probability  \
-	tf_keras \
-	swig \
-	supersuit \
-	pettingzoo \
-	pyarrow \
-	pandas
+RUN pip install \
+	#tensorflow_probability  \
+	#tf_keras \
+	swig
+	# ray["rllib"]
 
 RUN pip install gymnasium[box2d]
 
 # keras2をデフォルトでつかうように
-ENV TF_USE_LEGACY_KERAS=1
+# ENV TF_USE_LEGACY_KERAS=1

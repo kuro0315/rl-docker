@@ -1,4 +1,3 @@
-import gymnasium as gym
 import numpy as np
 
 from ray.rllib.algorithms.dreamerv3.dreamerv3 import DreamerV3Config
@@ -7,7 +6,8 @@ from ray.rllib.utils.framework import try_import_tf
 from ray import train, tune
 from ray.rllib.algorithms.dreamerv3.dreamerv3 import DreamerV3Config
 tf1, tf, tfv = try_import_tf()
-
+devices = tf.config.list_logical_devices("GPU")
+print(devices)
 env_name = "ImageCarRacing-v1"
 
 def _env_creator(ctx, render_mode = 'rgb_array'):
@@ -21,9 +21,7 @@ def _env_creator(ctx, render_mode = 'rgb_array'):
         )
     )
 
-
-# Register the FlappyBird-rgb-v0 env including necessary wrappers via the
-# `tune.register_env()` API.
+import gymnasium as gym
 gym.register(env_name,_env_creator)
 tune.register_env(env_name, _env_creator)
 
