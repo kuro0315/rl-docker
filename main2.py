@@ -73,12 +73,13 @@ config = (
         num_gpus_per_learner_worker=1 if num_gpus else 0,
         # For each (parallelized) env, we should provide a CPU. Lower this number
         # if you don't have enough CPUs.
-        num_cpus_for_local_worker=32 * (num_gpus or 1),
+        num_cpus_for_local_worker=8 * (num_gpus or 1),
     )
     .rollouts(
         # If we use >1 GPU and increase the batch size accordingly, we should also
         # increase the number of envs per worker.
-        num_envs_per_worker=32 * (num_gpus or 1),
+        num_rollout_workers = 4,
+        num_envs_per_worker=8 * (num_gpus or 1),
         remote_worker_envs=False,
     )
     .reporting(
@@ -88,7 +89,7 @@ config = (
         report_individual_batch_item_stats=False,
     )
     .training(
-        model_size="M",
+        model_size="S",
         training_ratio=512,
         # batch_size_B=16 * (num_gpus or 1),
     )
@@ -231,5 +232,10 @@ pygame.quit()
 
 
 subprocess.run([
-    "ffmpeg","-framerate", "24", "-i", "/workspace/frames/frame_%d.jpeg", "-c:v", "libx264", "-pix_fmt", "yuv420p", "/workspace/game_video.mp4"
+    "ffmpeg",
+    "-framerate", "24", 
+    "-i", "/workspace/frames/frame_%d.jpeg", 
+    "-c:v", "libx264", 
+    "-pix_fmt", "yuv420p", 
+    "/workspace/frames/game_video.mp4"
 ])
