@@ -11,10 +11,13 @@ RUN pip install --upgrade pip
 RUN pip install \
 	#tensorflow_probability  \
 	#tf_keras \
-	swig
+	swig gputil
 	# ray["rllib"]
 
 RUN pip install gymnasium[box2d]
+
+RUN sudo apt-get update
+RUN sudo apt-get install ffmpeg -y
 
 # keras2をデフォルトでつかうように
 # ENV TF_USE_LEGACY_KERAS=1

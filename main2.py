@@ -5,6 +5,8 @@ import ray
 import gymnasium
 
 import os
+
+import tqdm
 os.environ["TUNE_GLOBAL_CHECKPOINT_S"] = "300"  # 5分ごとに保存
 
 logging.getLogger("ray").setLevel(logging.ERROR)
@@ -87,51 +89,35 @@ config = (
     )
     .training(
         model_size="M",
-        training_ratio=64,
-        batch_size_B=16 * (num_gpus or 1),
+        training_ratio=512,
+        # batch_size_B=16 * (num_gpus or 1),
     )
 )
+
+algo = config.build()
 
 LEARN = True
 RESTORE = False and LEARN
 if LEARN:
     tuner : tune.Tuner
     if not RESTORE:
-        tuner = tune.Tuner(
-            "DreamerV3",
-            param_space=config,
-            run_config=train.RunConfig(
-                name="DreamerV3" + env_name + dt_now.strftime("%Y%m%d%H%M%S"),
-                storage_path = "/workspace/results",
-                stop={
-                    # "episode_reward_min": 900,
-                    # "training_iteration": 1000,
-                },
-                checkpoint_config=train.CheckpointConfig(
-                    checkpoint_at_end=True,
-                    checkpoint_frequency=5000,
-                    num_to_keep=1,
-                ),
-            ),
-        )
+        pass
     else:
-        # 中断された実験のパスを指定
-        experiment_path = "/workspace/results/DreamerV3ImageCarRacing-v120240717112359"
-        # 実験を再開
-        tuner = tune.Tuner.restore(
-            experiment_path,
-            trainable="DreamerV3",
-            resume_unfinished=True,
-            # resume_errored=True,
-        )
-    results = tuner.fit()
-    best_results = results.get_best_result()
-    best_checkpoint_path = best_results.checkpoint.path
+        raise NotImplementedError("Please set RESTORE to False to run the training.")
+        algo.restore("")
+    save_path = "/workspace/results/" + dt_now.strftime("%Y%m%d%H%M%S") + "/"
+    try:
+        for i in tqdm.tqdm(range(10000)):
+            res = algo.train()
+            if i % 1000 == 0:
+                algo.save(f"{save_path}checkpoint{i}")
+    except:
+        print("Training is interrupted.")
+        algo.save(f"{save_path}checkpoint_latest")
 else:
-    best_checkpoint_path = "/workspace/results/DreamerV3ImageCarRacing-v120240718061030/DreamerV3_ImageCarRacing-v1_03684_00000_0_2024-07-18_06-10-37/checkpoint_000046"
+    raise NotImplementedError("Please set LEARN to True to run the training.")
+    algo.restore("")
 
-algo = config.build()
-algo.restore(best_checkpoint_path)
 
 # Use the vector env API.
 env = gym.vector.make(
