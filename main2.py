@@ -1,26 +1,27 @@
-import numpy as np
 import logging
-import subprocess
-import ray
-import gymnasium
-
 import os
+import subprocess
 
-from regex import E
+import numpy as np
 import tqdm
+
+import ray
+
 os.environ["TUNE_GLOBAL_CHECKPOINT_S"] = "300"  # 5分ごとに保存
 
 logging.getLogger("ray").setLevel(logging.ERROR)
 logging.getLogger("gymnasium").setLevel(logging.ERROR)
 
 import datetime
+
 dt_now = datetime.datetime.now()
 
+from ray import tune
 from ray.rllib.algorithms.dreamerv3.dreamerv3 import DreamerV3Config
 from ray.rllib.core.columns import Columns
+from ray.rllib.env.wrappers.atari_wrappers import MaxAndSkipEnv
 from ray.rllib.utils.framework import try_import_tf
-from ray import train, tune
-from ray.rllib.algorithms.dreamerv3.dreamerv3 import DreamerV3Config
+
 tf1, tf, tfv = try_import_tf()
 devices = tf.config.list_logical_devices("GPU")
 env_name = "ImageCarRacing-v1"
@@ -28,6 +29,7 @@ env_name = "ImageCarRacing-v1"
 def _env_creator(ctx = None, render_mode = 'rgb_array'):
     import gymnasium as gym
     from supersuit.generic_wrappers import resize_v1
+
     from ray.rllib.algorithms.dreamerv3.utils.env_runner import NormalizedImageEnv
     
     print(f"{env_name} is created.")
@@ -53,14 +55,18 @@ def _env_creator(ctx = None, render_mode = 'rgb_array'):
     
     return NormalizedImageEnv(
         resize_v1(  # resize to 64x64 and normalize images
-            # CropBottomObservation(
-                gym.make("CarRacing-v2", render_mode = render_mode)
-            # ),
+            CropBottomObservation(
+                MaxAndSkipEnv(
+                    gym.make("CarRacing-v2", render_mode = render_mode)
+                    ,skip=4   
+                )
+            )
             ,x_size=64, y_size=64
         )
     )
 
 import gymnasium as gym
+
 gym.register(env_name,_env_creator)
 tune.register_env(env_name, _env_creator)
 
@@ -98,6 +104,7 @@ config = (
     .training(
         model_size="M",# Sなら4.45it/s
         training_ratio=1024,
+        # horizon_H=50,
         # batch_size_B=16 * (num_gpus or 1),
     )
 )
@@ -119,9 +126,11 @@ if LEARN:
             res = algo.train()
             if i % 10000 == 0:
                 algo.save(f"{save_path}checkpoint{i}")
-    except Exception as e:
+    except KeyboardInterrupt:
         print("Training is interrupted.")
-        print(e)
+        algo.save(f"{save_path}checkpoint_latest")
+    except Exception as e:
+        print(f"An error occurred: {e}")
         algo.save(f"{save_path}checkpoint_latest")
 else:
     raise NotImplementedError("Please set LEARN to True to run the training.")
@@ -152,13 +161,14 @@ states = rl_module.get_initial_state()
 
 
 import pygame
-import numpy as np
+
 # Pygameの初期化
 pygame.init()
 
 # framesフォルダ内を空にする
 import os
 import shutil
+
 shutil.rmtree("/workspace/frames", ignore_errors=True)
 os.mkdir("/workspace/frames")
 
