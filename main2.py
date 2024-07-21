@@ -6,6 +6,7 @@ import gymnasium
 
 import os
 
+from regex import E
 import tqdm
 os.environ["TUNE_GLOBAL_CHECKPOINT_S"] = "300"  # 5分ごとに保存
 
@@ -52,10 +53,10 @@ def _env_creator(ctx = None, render_mode = 'rgb_array'):
     
     return NormalizedImageEnv(
         resize_v1(  # resize to 64x64 and normalize images
-            CropBottomObservation(
+            # CropBottomObservation(
                 gym.make("CarRacing-v2", render_mode = render_mode)
-            ),
-            x_size=64, y_size=64
+            # ),
+            ,x_size=64, y_size=64
         )
     )
 
@@ -114,12 +115,13 @@ if LEARN:
         algo.restore("")
     save_path = "/workspace/results/" + dt_now.strftime("%Y%m%d%H%M%S") + "/"
     try:
-        for i in tqdm.tqdm(range(100000*2)):
+        for i in tqdm.tqdm(range(100000)):
             res = algo.train()
-            if i % 1000 == 0:
+            if i % 10000 == 0:
                 algo.save(f"{save_path}checkpoint{i}")
-    except:
+    except Exception as e:
         print("Training is interrupted.")
+        print(e)
         algo.save(f"{save_path}checkpoint_latest")
 else:
     raise NotImplementedError("Please set LEARN to True to run the training.")
