@@ -29,6 +29,8 @@ def _env_creator(ctx = None, render_mode = 'rgb_array'):
     from supersuit.generic_wrappers import resize_v1
     from ray.rllib.algorithms.dreamerv3.utils.env_runner import NormalizedImageEnv
     
+    print(f"{env_name} is created.")
+    
     class CropBottomObservation(gym.ObservationWrapper):
         def __init__(self, env, crop_height=12):
             super().__init__(env)
@@ -61,7 +63,12 @@ import gymnasium as gym
 gym.register(env_name,_env_creator)
 tune.register_env(env_name, _env_creator)
 
+num_cpus = 32
 num_gpus = 1
+ray.init(
+    num_cpus=num_cpus,
+    num_gpus=num_gpus,
+)
 
 config = (
     DreamerV3Config()
@@ -73,13 +80,12 @@ config = (
         num_gpus_per_learner_worker=1 if num_gpus else 0,
         # For each (parallelized) env, we should provide a CPU. Lower this number
         # if you don't have enough CPUs.
-        num_cpus_for_local_worker=8 * (num_gpus or 1),
+        # num_cpus_for_local_worker=4 * (num_gpus or 1), # Tune利用時のみ効くみたい
     )
     .rollouts(
         # If we use >1 GPU and increase the batch size accordingly, we should also
         # increase the number of envs per worker.
-        num_rollout_workers = 4,
-        num_envs_per_worker=8 * (num_gpus or 1),
+        # num_envs_per_worker=4 * (num_gpus or 1),
         remote_worker_envs=False,
     )
     .reporting(
@@ -89,8 +95,8 @@ config = (
         report_individual_batch_item_stats=False,
     )
     .training(
-        model_size="S",
-        training_ratio=512,
+        model_size="M",# Sなら4.45it/s
+        training_ratio=1024,
         # batch_size_B=16 * (num_gpus or 1),
     )
 )
@@ -108,7 +114,7 @@ if LEARN:
         algo.restore("")
     save_path = "/workspace/results/" + dt_now.strftime("%Y%m%d%H%M%S") + "/"
     try:
-        for i in tqdm.tqdm(range(10000)):
+        for i in tqdm.tqdm(range(100000*2)):
             res = algo.train()
             if i % 1000 == 0:
                 algo.save(f"{save_path}checkpoint{i}")
