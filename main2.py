@@ -3,9 +3,8 @@ import os
 import subprocess
 
 import numpy as np
-import tqdm
-
 import ray
+import tqdm
 
 os.environ["TUNE_GLOBAL_CHECKPOINT_S"] = "300"  # 5分ごとに保存
 
@@ -23,14 +22,20 @@ from ray.rllib.env.wrappers.atari_wrappers import MaxAndSkipEnv
 from ray.rllib.utils.framework import try_import_tf
 
 tf1, tf, tfv = try_import_tf()
-devices = tf.config.list_logical_devices("GPU")
 env_name = "ImageCarRacing-v1"
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+  try:
+    for gpu in gpus:
+      tf.config.experimental.set_memory_growth(gpu, True)
+  except RuntimeError as e:
+    print(e)
 
 def _env_creator(ctx = None, render_mode = 'rgb_array'):
     import gymnasium as gym
-    from supersuit.generic_wrappers import resize_v1
-
     from ray.rllib.algorithms.dreamerv3.utils.env_runner import NormalizedImageEnv
+    from supersuit.generic_wrappers import resize_v1
     
     print(f"{env_name} is created.")
     
@@ -58,7 +63,7 @@ def _env_creator(ctx = None, render_mode = 'rgb_array'):
             CropBottomObservation(
                 MaxAndSkipEnv(
                     gym.make("CarRacing-v2", render_mode = render_mode)
-                    ,skip=4   
+                    ,skip=4
                 )
             )
             ,x_size=64, y_size=64
@@ -102,8 +107,9 @@ config = (
         report_individual_batch_item_stats=False,
     )
     .training(
-        model_size="M",# Sなら4.45it/s
-        training_ratio=1024,
+        model_size="L",# Sなら4.45it/s
+        training_ratio=64,
+        use_float16 = True
         # horizon_H=50,
         # batch_size_B=16 * (num_gpus or 1),
     )
