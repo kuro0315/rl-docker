@@ -2,3 +2,5 @@ results/
 .mypy_cache/
 ray/
 frames/
+.venv/
+logs/

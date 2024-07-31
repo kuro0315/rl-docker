@@ -1,0 +1,2 @@
+python sheeprl.py exp=dreamer_v3 env=gym env.id=CarRacing-v2 algo.cnn_keys.encoder=[rgb] algo=dreamer_v3_XS fabric.accelerator=gpu fabric.strategy=ddp fabric.d
+evices=1 fabric.precision=16-mixed algo.learning_starts=1024
