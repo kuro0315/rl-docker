@@ -1,4 +1,4 @@
-# rllib-docker
+# rl-docker
 
 ただの備忘録
 
